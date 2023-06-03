@@ -17,14 +17,8 @@ alnum       [a-zA-Z0-9_]
 
 %%
 
-"if"        { return TOKEN(IF); }
-"else"      { return TOKEN(ELSE); }
-"while"     { return TOKEN(WHILE); }
-"break"     { return TOKEN(BREAK); }
-"return"    { return TOKEN(RETURN); }
-
 [ \t\n]                                                 ;
-{alpha}({alnum}*)                                         { SAVE_TOKEN; return IDENTIFIER;}
+{alpha}({alnum}*)                                       { SAVE_TOKEN; return IDENTIFIER;}
 ({digits}+"."{digits}*)|({digits}*"."{digits}+)         { SAVE_TOKEN; return TFLOAT;}
 [1-9]{digits}*                                          { SAVE_TOKEN; return TINTEGER;}
 \'.\'|\'\\.\'                                           { SAVE_TOKEN; return TCHAR;} // matches either a single character enclosed in single quotes or an escape sequence enclosed in single quotes
@@ -60,6 +54,12 @@ alnum       [a-zA-Z0-9_]
 "^"             { return TOKEN('^'); }
 "|"             { return TOKEN('|'); }
 "?"             { return TOKEN('?'); }
+
+"if"        { return TOKEN(IF); }
+"else"      { return TOKEN(ELSE); }
+"while"     { return TOKEN(WHILE); }
+"break"     { return TOKEN(BREAK); }
+"return"    { return TOKEN(RETURN); }
 
 .               { printf("Unknown token: %s in line: %d\n", yytext, yylineno); }
 
