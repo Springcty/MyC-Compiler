@@ -21,8 +21,8 @@ public:
     int lineno;
 
     Node(int lineno): lineno(lineno) {}
-    virtual ~Node() {}
     virtual llvm::Value *CodeGen(CodeGenContext &context) {}
+    virtual void generateJson(string &s) {};
 };
 
 class NExpression : public Node
@@ -30,12 +30,14 @@ class NExpression : public Node
 public:
     NExpression(int lineno): Node(lineno) {}
     virtual llvm::Value * GetAddr(CodeGenContext &context) {}
+    virtual void generateJson(string &s) {};
 };
 
 class NStatement : public Node
 {
 public:
     NStatement(int lineno): Node(lineno) {}
+    virtual void generateJson(string &s) {};
 };
 
 class NInteger : public NExpression
@@ -45,15 +47,17 @@ public:
 
     NInteger(long long value, int lineno): value(value), NExpression(lineno) {}
     llvm::Value *CodeGen(CodeGenContext &context);
+    void generateJson(string &s);
 };
 
 class NFloat : public NExpression
 {
 public:
-    double value;
+    float value;
 
-    NFloat(double value, int lineno): value(value), NExpression(lineno) {}
+    NFloat(float value, int lineno): value(value), NExpression(lineno) {}
     llvm::Value *CodeGen(CodeGenContext &context);
+    void generateJson(string &s);
 };
 
 class NChar: public NExpression
@@ -63,6 +67,7 @@ public:
 
     NChar(string &value, int lineno): value(value), NExpression(lineno) {}
     llvm::Value *CodeGen(CodeGenContext &context);
+    void generateJson(string &s);
 };
 
 class NString: public NExpression
@@ -72,7 +77,8 @@ public:
 
     NString(string &value, int lineno): value(value), NExpression(lineno) {}
     llvm::Value *CodeGen(CodeGenContext &context);
-    llvm::Value *GetAddr(CodeGenContext &context);
+    // llvm::Value *GetAddr(CodeGenContext &context);
+    void generateJson(string &s);
 };
 
 class NIdentifier : public NExpression
@@ -80,9 +86,10 @@ class NIdentifier : public NExpression
 public:
     string name;
 
-    NIdentifier(const string &name, int lineno): name(name), NExpression(lineno) {}
+    NIdentifier(string &name, int lineno): name(name), NExpression(lineno) {}
     llvm::Value *CodeGen(CodeGenContext &context);
     llvm::Value *GetAddr(CodeGenContext &context);
+    void generateJson(string &s);
 };
 
 class NBinaryOperator : public NExpression
@@ -93,15 +100,17 @@ public:
     NExpression &re;
     NBinaryOperator(int op, NExpression &l, NExpression &r, int lineno): op(op), le(l), re(r), NExpression(lineno) {}
     llvm::Value *CodeGen(CodeGenContext &context);
+    void generateJson(string &s);
 };
 
 class NAssignment : public NExpression
 {
 public:
     NIdentifier &li;
-    NIdentifier &ri;
-    NAssignment(NIdentifier &l, NIdentifier &r, int lineno): li(l), ri(r), NExpression(lineno) {}
+    NExpression &ri;
+    NAssignment(NIdentifier &l, NExpression &r, int lineno): li(l), ri(r), NExpression(lineno) {}
     llvm::Value *CodeGen(CodeGenContext &context);
+    void generateJson(string &s);
 };
 
 class NArrayElement: public NExpression
@@ -113,6 +122,7 @@ public:
     NArrayElement(NIdentifier &id, NExpression &idx, int lineno): ident(id), idx(idx), NExpression(lineno) {}
     llvm::Value *CodeGen(CodeGenContext &context);
     llvm::Value *GetAddr(CodeGenContext &context);
+    void generateJson(string &s);
 };
 
 class NArrayElementAssign: public NExpression
@@ -124,6 +134,7 @@ public:
     
     NArrayElementAssign(NIdentifier &ident, NExpression &idx, NExpression &re, int lineno): ident(ident), idx(idx), re(re), NExpression(lineno) {}
     llvm::Value *CodeGen(CodeGenContext &context);
+    void generateJson(string &s);
 };
 
 class NFunctionCall: public NExpression
@@ -135,6 +146,7 @@ public:
     NFunctionCall(NIdentifier &ident, int lineno): ident(ident), NExpression(lineno) {}
     NFunctionCall(NIdentifier &ident, ExpressionList &args, int lineno): ident(ident), args(args), NExpression(lineno) {}
     llvm::Value *CodeGen(CodeGenContext &context);
+    void generateJson(string &s);
 };
 
 class NGetAddr: public NExpression
@@ -144,6 +156,7 @@ public:
 
     NGetAddr(NIdentifier &re, int lineno): re(re), NExpression(lineno) {}
     llvm::Value *CodeGen(CodeGenContext &context);
+    void generateJson(string &s);
 };
 
 class NGetArrayAddr: public NExpression
@@ -154,6 +167,7 @@ public:
 
     NGetArrayAddr(NIdentifier &ident, NExpression &idx, int lineno): ident(ident), idx(idx), NExpression(lineno) {}
     llvm::Value *CodeGen(CodeGenContext &context);
+    void generateJson(string &s);
 };
 
 class NBlock : public NExpression
@@ -163,6 +177,7 @@ public:
     NBlock(int lineno): NExpression(lineno) {}
     NBlock(StatementList stmts, int lineno): stmts(stmts), NExpression(lineno) {}
     llvm::Value *CodeGen(CodeGenContext &context);
+    void generateJson(string &s);
 };
 
 class NExpressionStatement : public NStatement
@@ -171,31 +186,34 @@ public:
     NExpression &expr;
     NExpressionStatement(NExpression &expr, int lineno): expr(expr), NStatement(lineno) {}
     llvm::Value *CodeGen(CodeGenContext &context);
+    void generateJson(string &s);
 };
 
 class NVariableDeclaration : public NStatement
 {
 public:
     int size;
-    const NIdentifier &type;
+    NIdentifier &type;
     NIdentifier &id;
     NExpression *assin_expr;
 
-    NVariableDeclaration(const NIdentifier &type, NIdentifier &id, int lineno): type(type), id(id), NStatement(lineno) {}
-    NVariableDeclaration(const NIdentifier &type, NIdentifier &id, NExpression *assin_expr, int lineno): type(type), id(id), assin_expr(assin_expr), NStatement(lineno) {}
-    NVariableDeclaration(const NIdentifier &type, NIdentifier &id, int size, int lineno): type(type), id(id), size(size), NStatement(lineno) {}
+    NVariableDeclaration(NIdentifier &type, NIdentifier &id, int lineno): type(type), id(id), NStatement(lineno) {}
+    NVariableDeclaration(NIdentifier &type, NIdentifier &id, NExpression *assin_expr, int lineno): type(type), id(id), assin_expr(assin_expr), NStatement(lineno) {}
+    NVariableDeclaration(NIdentifier &type, NIdentifier &id, int size, int lineno): type(type), id(id), size(size), NStatement(lineno) {}
     llvm::Value *CodeGen(CodeGenContext &context);
+    void generateJson(string &s);
 };
 
 class NFunctionDeclaration : public NStatement
 {
 public:
-    const NIdentifier &type;
-    const NIdentifier &id;
+    NIdentifier &type;
+    NIdentifier &id;
     VariableList args;
     NBlock &block;
-    NFunctionDeclaration(const NIdentifier &type, const NIdentifier &id, const VariableList &args, NBlock &block, int lineno): type(type), id(id), args(args), block(block), NStatement(lineno) {}
+    NFunctionDeclaration(NIdentifier &type, NIdentifier &id, VariableList &args, NBlock &block, int lineno): type(type), id(id), args(args), block(block), NStatement(lineno) {}
     llvm::Value *CodeGen(CodeGenContext &context);
+    void generateJson(string &s);
 };
 
 class NBreakStatement: public NStatement
@@ -203,6 +221,7 @@ class NBreakStatement: public NStatement
 public:
     NBreakStatement(int lineno): NStatement(lineno) {}
     llvm::Value *CodeGen(CodeGenContext &context);
+    void generateJson(string &s);
 };
 
 class NIfStatement: public NStatement
@@ -213,6 +232,7 @@ public:
 
     NIfStatement(NExpression &expr, NBlock &if_blk, int lineno): expr(expr), if_blk(if_blk), NStatement(lineno) {}
     llvm::Value *CodeGen(CodeGenContext &context);
+    void generateJson(string &s);
 };
 
 class NIfElseStatement: public NStatement
@@ -225,6 +245,7 @@ public:
     NIfElseStatement(NExpression &expr, NBlock &if_blk, NBlock &else_blk, int lineno):
         expr(expr), if_blk(if_blk), else_blk(else_blk), NStatement(lineno) {}
     llvm::Value *CodeGen(CodeGenContext &context);
+    void generateJson(string &s);
 };
 
 class NWhileStatement: public NStatement
@@ -235,6 +256,7 @@ public:
 
     NWhileStatement(NExpression &expr, NBlock &loop_blk, int lineno): expr(expr), loop_blk(loop_blk), NStatement(lineno) {}
     llvm::Value *CodeGen(CodeGenContext &context);
+    void generateJson(string &s);
 };
 
 class NReturnStatement: public NStatement
@@ -244,6 +266,7 @@ public:
 
     NReturnStatement(NExpression &expr, int lineno): expr(expr), NStatement(lineno) {}
     llvm::Value *CodeGen(CodeGenContext &context);
+    void generateJson(string &s);
 };
 
 class NReturnVoidStatement: public NStatement
@@ -251,6 +274,7 @@ class NReturnVoidStatement: public NStatement
 public:
     NReturnVoidStatement(int lineno): NStatement(lineno) {}
     llvm::Value *CodeGen(CodeGenContext &context);
+    void generateJson(string &s);
 };
 
 #endif

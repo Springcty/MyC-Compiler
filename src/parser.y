@@ -20,19 +20,19 @@
     NExpression *expr;
     NStatement *stmt;
     NIdentifier *ident;
-    NVariableDeclaration *val_decl;
+    NVariableDeclaration *variable_decl;
     vector<NVariableDeclaration*> *var_list;
     vector<NExpression*> *exp_list;
-    string *string;
-    int tokens;
+    string *str;
+    int token;
 }
 
 // Define terminal symbols (tokens) which match token.l lex file. 
 // And we define the node type they represent.
-%token <string> IDENTIFIER TINTEGER TFLOAT TCHAR TSTRING
-%token <token> PLUS MINUS MUL DIV
+%token <str> IDENTIFIER TINTEGER TFLOAT TCHAR TSTRING
+%token <token> PLUS MINUS MUL DIV // + ,-, * /
 %token <token> AND OR
-%token <token> NOT GAD LE GT LEQ GEQ NEQ EQU
+%token <token> NOT GAD LET GT LEQ GEQ NEQ EQU
 %token <token> IF ELSE WHILE BREAK RETURN
 
 // user defined non-terminal
@@ -49,7 +49,7 @@
 // operator precedence for mathematical operators
 %left PLUS MINUS MUL DIV
 %left OR AND
-%left EQU NEQ LE GT LEQ GEQ
+%left EQU NEQ LET GT LEQ GEQ
 %left '(' ')' '[' ']'
 %right '!'
 
@@ -86,7 +86,7 @@ stmt:
 var_decl:
     ident ident { $$ = new NVariableDeclaration(*$1, *$2, yylineno);} // int a;
     | ident ident '=' expr { $$ = new NVariableDeclaration(*$1, *$2, $4, yylineno);} // int a = b + 2;
-    | ident ident '[' TINTEGER ']' { $$ = new NVariableDeclaration(*$1, *$2, $4, yylineno);} // int a[10]
+    | ident ident '[' TINTEGER ']' { $$ = new NVariableDeclaration(*$1, *$2, atoi($4->c_str()), yylineno);} // int a[10]
     ;
 
 func_decl:
@@ -95,8 +95,8 @@ func_decl:
 
 func_decl_args:
     /*no args*/ {$$ = new VariableList();} // no args
-    | var_decl { $$ = new VariableList(); $$->push_back($<var_decl>1);} // int a
-    | func_decl_args ',' var_decl { $1->push_back($<var_decl>3);}       // int a, int b
+    | var_decl { $$ = new VariableList(); $$->push_back($<variable_decl>1);} // int a
+    | func_decl_args ',' var_decl { $1->push_back($<variable_decl>3);}       // int a, int b
     ;
 
 ident:
@@ -105,9 +105,9 @@ ident:
 
 const_value:
     TINTEGER { $$ = new NInteger(atol($1->c_str()), yylineno); delete $1;}
-    | TFLOAT { $$ = new NFloat(atof($1->c_str())), yylineno); delete $1;}
+    | TFLOAT { $$ = new NFloat((atof($1->c_str())), yylineno); delete $1;}
     | TCHAR { $$ = new NChar(*$1, yylineno); delete $1;}
-    | TSTRING { $$ = new NString(*$1, yylineno); delete $1};
+    | TSTRING { $$ = new NString(*$1, yylineno); delete $1;}
     ;
 
 expr:
@@ -120,16 +120,16 @@ expr:
     | expr LEQ expr { $$ = new NBinaryOperator($2, *$1, *$3, yylineno);} // a+2
     | expr GEQ expr { $$ = new NBinaryOperator($2, *$1, *$3, yylineno);} // a+2
     | expr NEQ expr { $$ = new NBinaryOperator($2, *$1, *$3, yylineno);} // a+2
-    | expr LE expr { $$ = new NBinaryOperator($2, *$1, *$3, yylineno);} // a+2
+    | expr LET expr { $$ = new NBinaryOperator($2, *$1, *$3, yylineno);} // a+2
     | expr GT expr { $$ = new NBinaryOperator($2, *$1, *$3, yylineno);} // a+2
     | expr AND expr { $$ = new NBinaryOperator($2, *$1, *$3, yylineno);} // a+2
     | expr OR expr { $$ = new NBinaryOperator($2, *$1, *$3, yylineno);} // a+2
     | '(' expr ')' { $$ = $2;} // (a+b)
     | ident '=' expr { $$ = new NAssignment(*$<ident>1, *$3, yylineno);} // a = a + 2
-    | ident '(' ')' { $$ = NFunctionCall(*$1, yylineno);}
-    | ident '(' call_args ')' { $$ = NFunctionCall(*$1, *$3, yylineno); delete $3;} // f(a, b)
+    | ident '(' ')' { $$ = new NFunctionCall(*$1, yylineno);}
+    | ident '(' call_args ')' { $$ = new NFunctionCall(*$1, *$3, yylineno); delete $3;} // f(a, b)
     | ident { $<ident>$ = $1;} // a
-    | ident '[' expr ']' { $$ = NArrayElement(*$1, *$3, yylineno);}
+    | ident '[' expr ']' { $$ = new NArrayElement(*$1, *$3, yylineno);}
     | ident '[' expr ']' '=' expr { $$ = new NArrayElementAssign(*$1, *$3, *$6, yylineno);}
     | GAD ident { $$ = new NGetAddr(*$2, yylineno);}
     | GAD ident '[' expr ']' { $$ = new NGetArrayAddr(*$2, *$4, yylineno);}

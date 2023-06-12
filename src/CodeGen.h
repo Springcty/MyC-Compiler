@@ -26,7 +26,7 @@
 
 using namespace std;
 
-extern llvm::LLVMContext myContext; //定义全局context
+extern llvm::LLVMContext myContext; //定义全局context，保存LLVM程序状态数据
 extern llvm::IRBuilder<> myBuilder; //定义全局IRbuilder
 
 class symbolTable{ 
